@@ -1,0 +1,105 @@
+name: Translations Bot
+description: Automatically translate your project
+inputs:
+  file_path:
+    description: Set your original translation file
+  languages:
+    description: define output languages and output files
+  context:
+    description: describe your business
+  auth_token:
+    description: set your token
+
+
+jobs:
+  process_translation_file:
+    name: Fetch original translation file
+    runs-on: ubuntu-latest
+    env:
+      TRANSLATION_FILE_PATH: ${{ inputs.file_path }}
+      AUTH_TOKEN: ${{ inputs.auth_token }}
+      LANGUAGES: ${{ inputs.languages }}
+      CONTEXT: ${{ inputs.context }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - name: Get url to upload translation file
+        run:  |
+          filename=$(basename -- "$TRANSLATION_FILE_PATH")
+          extension="${filename##*.}"
+          type=$(file -b --mime-type $TRANSLATION_FILE_PATH)
+          curl --request GET "https://11af-145-224-124-87.ngrok-free.app/gha/process/generate-presigned_url?type=$type&extension=$extension" --header "token: Bearer $AUTH_TOKEN" --header "ContentType: application/json" > presigned_url.json
+          echo "TRANSLATION_FILE_EXTENSION=$extension" >> $GITHUB_ENV
+          echo "TRANSLATION_FILE_TYPE=$type" >> $GITHUB_ENV
+      - name: Uploading file
+        run: |
+          cat presigned_url.json | grep "presigned_url" | sed "s/{/\"\"/g" | sed "s/}/\"\"/g" | sed "s/\"//g" | sed "s/,//g" | sed "s/presigned_url://g" | sed "s/ //g" | xargs curl --request PUT --header "Content-Type: ${{ env.TRANSLATION_FILE_TYPE }}" --header "x-amz-acl: public-read" --data-binary "@$TRANSLATION_FILE_PATH"
+      - name: Storing metadata for uploaded file
+        run: |
+          TEMP_KEY_VALUE=$(cat presigned_url.json | grep "key" | sed "s/{/""/g" | sed "s/}/""/g" | sed "s/\"//g"  | sed "s/,//g" | sed "s/key://g" | sed "s/ //g")
+          echo "KEY_UPLOADED_FILE=$TEMP_KEY_VALUE" >> $GITHUB_ENV
+      - name: diggesting_languages
+        run: |
+           array_languages=($(echo $LANGUAGES | tr "," "\n"))
+           languages_str=''
+           for i in "${array_languages[@]}"
+           do
+              lang=$(echo $i | sed 's/;/ /'|awk '{print $1}')
+              if [ -z "$languages_str" ]
+              then
+                languages_str="$lang"
+              else
+                languages_str="$languages_str,$lang"
+              fi
+           done
+           echo "LANGUAGE_STR=$languages_str" >> $GITHUB_ENV
+      - name: Start job
+        run: |
+          curl -s --request POST "https://11af-145-224-124-87.ngrok-free.app/gha/process/new" --header "token: Bearer $AUTH_TOKEN" --form "key_file=\"${{ env.KEY_UPLOADED_FILE }}\"" --form "languages=\"$LANGUAGE_STR\""  --form "context=\"$CONTEXT\"" > response_api.txt
+          TEMP_UUID=$(cat response_api.txt | grep uuid | sed "s/\"//g" | sed "s/uuid: //g" | sed "s/,//g" | sed "s/ //g")
+          echo "UUID_PROCESS=$TEMP_UUID" >> $GITHUB_ENV
+      - name: Waiting for job to finish
+        run: |
+          PERCENT=0
+          while [ $PERCENT -lt 100 ];do
+            curl -s --request POST "https://11af-145-224-124-87.ngrok-free.app/gha/process/details" --header "token: Bearer $AUTH_TOKEN" --form "uuid=\"${{ env.UUID_PROCESS }}\"" > result_details.txt
+            PERCENT=$(cat result_details.txt | grep percent | sed "s/\"//g" | sed "s/percent: //g" | sed "s/,//g" | sed "s/ //g")
+            echo "Current progress: $PERCENT %"
+            sleep 3
+          done
+      - name: Download translation files
+        run: |
+          array_languages=($(echo $LANGUAGES | tr "," "\n"))
+          paths=''
+          
+          for i in "${array_languages[@]}"
+          do
+              lang=$(echo $i | sed 's/;/ /'|awk '{print $1}')
+              file_output=$(echo $i | sed 's/;/ /'|awk '{print $2}')
+              echo $lang
+              echo $file_output
+              echo "Downloading language $lang"
+              curl --request POST "https://11af-145-224-124-87.ngrok-free.app/gha/download" --header "token: Bearer $AUTH_TOKEN" --form "uuid=\"${{ env.UUID_PROCESS }}\"" --form "language=\"$lang\"" --create-dirs --output "$file_output"
+              paths+="$file_output,"
+          done
+          echo "PATHS_TO_PUSH=$paths" >> $GITHUB_ENV
+          echo "Translation files downloaded"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with: 
+          add-paths: ${{ env.PATHS_TO_PUSH }}
+          branch: update_translations_${{ github.run_id }}
+          title: |
+             [Translation bot] Updating translations for ${{ env.LANGUAGE_STR }}
+          body: |
+            ## Updating translation files
+            Automation of the process of translation files
+      - name: Clean environmnet
+        run: |
+          rm -rf presigned_url.json
+          rm -rf response_api.txt
+
+
+
