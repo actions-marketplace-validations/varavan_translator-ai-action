@@ -1,4 +1,4 @@
-name: Translations Bot
+name: Automated Translations Bot by varavan
 description: Automatically translate your project
 inputs:
   file_path:
