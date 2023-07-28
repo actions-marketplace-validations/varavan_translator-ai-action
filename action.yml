@@ -30,7 +30,7 @@ jobs:
           filename=$(basename -- "$TRANSLATION_FILE_PATH")
           extension="${filename##*.}"
           type=$(file -b --mime-type $TRANSLATION_FILE_PATH)
-          curl --request GET "https://11af-145-224-124-87.ngrok-free.app/gha/process/generate-presigned_url?type=$type&extension=$extension" --header "token: Bearer $AUTH_TOKEN" --header "ContentType: application/json" > presigned_url.json
+          curl --request GET "https://api.jerone.fyi/gha/process/generate-presigned_url?type=$type&extension=$extension" --header "token: Bearer $AUTH_TOKEN" --header "ContentType: application/json" > presigned_url.json
           echo "TRANSLATION_FILE_EXTENSION=$extension" >> $GITHUB_ENV
           echo "TRANSLATION_FILE_TYPE=$type" >> $GITHUB_ENV
       - name: Uploading file
@@ -57,14 +57,14 @@ jobs:
            echo "LANGUAGE_STR=$languages_str" >> $GITHUB_ENV
       - name: Start job
         run: |
-          curl -s --request POST "https://11af-145-224-124-87.ngrok-free.app/gha/process/new" --header "token: Bearer $AUTH_TOKEN" --form "key_file=\"${{ env.KEY_UPLOADED_FILE }}\"" --form "languages=\"$LANGUAGE_STR\""  --form "context=\"$CONTEXT\"" > response_api.txt
+          curl -s --request POST "https://api.jerone.fyi/gha/process/new" --header "token: Bearer $AUTH_TOKEN" --form "key_file=\"${{ env.KEY_UPLOADED_FILE }}\"" --form "languages=\"$LANGUAGE_STR\""  --form "context=\"$CONTEXT\"" > response_api.txt
           TEMP_UUID=$(cat response_api.txt | grep uuid | sed "s/\"//g" | sed "s/uuid: //g" | sed "s/,//g" | sed "s/ //g")
           echo "UUID_PROCESS=$TEMP_UUID" >> $GITHUB_ENV
       - name: Waiting for job to finish
         run: |
           PERCENT=0
           while [ $PERCENT -lt 100 ];do
-            curl -s --request POST "https://11af-145-224-124-87.ngrok-free.app/gha/process/details" --header "token: Bearer $AUTH_TOKEN" --form "uuid=\"${{ env.UUID_PROCESS }}\"" > result_details.txt
+            curl -s --request POST "https://api.jerone.fyi/gha/process/details" --header "token: Bearer $AUTH_TOKEN" --form "uuid=\"${{ env.UUID_PROCESS }}\"" > result_details.txt
             PERCENT=$(cat result_details.txt | grep percent | sed "s/\"//g" | sed "s/percent: //g" | sed "s/,//g" | sed "s/ //g")
             echo "Current progress: $PERCENT %"
             sleep 3
@@ -81,7 +81,7 @@ jobs:
               echo $lang
               echo $file_output
               echo "Downloading language $lang"
-              curl --request POST "https://11af-145-224-124-87.ngrok-free.app/gha/download" --header "token: Bearer $AUTH_TOKEN" --form "uuid=\"${{ env.UUID_PROCESS }}\"" --form "language=\"$lang\"" --create-dirs --output "$file_output"
+              curl --request POST "https://api.jerone.fyi/gha/download" --header "token: Bearer $AUTH_TOKEN" --form "uuid=\"${{ env.UUID_PROCESS }}\"" --form "language=\"$lang\"" --create-dirs --output "$file_output"
               paths+="$file_output,"
           done
           echo "PATHS_TO_PUSH=$paths" >> $GITHUB_ENV
