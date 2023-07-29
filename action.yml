@@ -1,4 +1,4 @@
-name: Automated Translations Bot by varavan
+name: Automated Translations Bot
 description: Automatically translate your project
 
 on:
@@ -18,10 +18,10 @@ on:
         required: true
 
 env:
-    TRANSLATION_FILE_PATH: ${{ inputs.file_path }}
-    AUTH_TOKEN: ${{ inputs.auth_token }}
-    LANGUAGES: ${{ inputs.languages }}
-    CONTEXT: ${{ inputs.context }}
+  TRANSLATION_FILE_PATH: ${{ inputs.file_path }}
+  AUTH_TOKEN: ${{ inputs.auth_token }}
+  LANGUAGES: ${{ inputs.languages }}
+  CONTEXT: ${{ inputs.context }}
 
 jobs:
   process_translation_file:
