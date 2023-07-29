@@ -6,23 +6,27 @@ on:
     inputs:
       file_path:
         description: Set your original translation file
+        required: true
       languages:
         description: define output languages and output files
+        required: true
       context:
         description: describe your business
+        required: true
       auth_token:
         description: set your token
+        required: true
 
+env:
+    TRANSLATION_FILE_PATH: ${{ inputs.file_path }}
+    AUTH_TOKEN: ${{ inputs.auth_token }}
+    LANGUAGES: ${{ inputs.languages }}
+    CONTEXT: ${{ inputs.context }}
 
 jobs:
   process_translation_file:
     name: Fetch original translation file
     runs-on: ubuntu-latest
-    env:
-      TRANSLATION_FILE_PATH: ${{ github.event.inputs.file_path }}
-      AUTH_TOKEN: ${{ github.event.inputs.auth_token }}
-      LANGUAGES: ${{ github.event.inputs.languages }}
-      CONTEXT: ${{ github.event.inputs.context }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
