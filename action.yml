@@ -7,15 +7,19 @@ on:
       file_path:
         description: Set your original translation file
         required: true
+        type: string
       languages:
         description: define output languages and output files
         required: true
+        type: string
       context:
         description: describe your business
         required: true
+        type: string
       auth_token:
         description: set your token
         required: true
+        type: string
 
 env:
   TRANSLATION_FILE_PATH: ${{ inputs.file_path }}
