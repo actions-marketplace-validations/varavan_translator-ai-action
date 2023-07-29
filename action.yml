@@ -19,10 +19,10 @@ jobs:
     name: Fetch original translation file
     runs-on: ubuntu-latest
     env:
-      TRANSLATION_FILE_PATH: ${{ inputs.file_path }}
-      AUTH_TOKEN: ${{ inputs.auth_token }}
-      LANGUAGES: ${{ inputs.languages }}
-      CONTEXT: ${{ inputs.context }}
+      TRANSLATION_FILE_PATH: ${{ github.event.inputs.file_path }}
+      AUTH_TOKEN: ${{ github.event.inputs.auth_token }}
+      LANGUAGES: ${{ github.event.inputs.languages }}
+      CONTEXT: ${{ github.event.inputs.context }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
